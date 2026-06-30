@@ -35,6 +35,7 @@ router.get('/:doc_id/events', async (req: Request, res: Response) => {
           total_pages: doc.totalPages ?? pagesCount,
           screenshots_generated: pagesCount,
           chunks_created: chunksCount,
+          processing_stage: doc.processingStage ?? 'pending',
         },
       });
 

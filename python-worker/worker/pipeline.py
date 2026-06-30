@@ -66,9 +66,11 @@ def run(job_data: dict) -> None:
         # 3. download raw file
         local_path = os.path.join(work_dir, original_filename)
         download_file(storage_path, local_path)
+        database.set_doc_stage(db, doc_id, 'parsing')
 
         # 4. docling parse → insert pages, capture page_id map
         page_data_list = docling_parser.parse(local_path)
+        database.set_doc_stage(db, doc_id, 'screenshots')
         page_id_map: dict[int, str] = {}
 
         for pd in page_data_list:
@@ -98,6 +100,7 @@ def run(job_data: dict) -> None:
                 .values(screenshot_url=key)
             )
         db.commit()
+        database.set_doc_stage(db, doc_id, 'chunking')
 
         # 6. chunk via Unstructured
         chunk_list = chunker.chunk(local_path)
@@ -119,6 +122,7 @@ def run(job_data: dict) -> None:
                 'bounding_box': c.bounding_box,
             })
 
+        database.set_doc_stage(db, doc_id, 'embedding')
         # 8. embed → Chroma
         vector_ids = embedder.embed_and_store(chunk_dicts)
 

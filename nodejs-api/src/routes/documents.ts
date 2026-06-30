@@ -19,6 +19,40 @@ const upload = multer({
   },
 });
 
+router.get('/', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const docs = await prisma.document.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+      select: {
+        id: true,
+        originalFilename: true,
+        status: true,
+        totalPages: true,
+        chunksCount: true,
+        createdAt: true,
+        updatedAt: true,
+        processingStage: true,
+      },
+    });
+    res.json({
+      documents: docs.map((d) => ({
+        id: d.id,
+        original_filename: d.originalFilename,
+        status: d.status,
+        total_pages: d.totalPages,
+        chunks_count: d.chunksCount,
+        created_at: d.createdAt.toISOString(),
+        updated_at: d.updatedAt.toISOString(),
+        processing_stage: d.processingStage ?? 'pending',
+      })),
+      total: docs.length,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post('/upload', upload.single('file'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     if (!req.file) {
@@ -88,11 +122,6 @@ router.get('/:doc_id/status', async (req: Request, res: Response, next: NextFunc
     const pagesCount = await prisma.page.count({ where: { docId: doc_id } });
     const chunksCount = await prisma.chunk.count({ where: { docId: doc_id } });
 
-    let currentStage = 'pending';
-    if (doc.status === 'processing') currentStage = 'processing';
-    else if (doc.status === 'completed') currentStage = 'embedding_complete';
-    else if (doc.status === 'failed') currentStage = 'failed';
-
     res.json({
       doc_id: doc.id,
       status: doc.status,
@@ -100,7 +129,7 @@ router.get('/:doc_id/status', async (req: Request, res: Response, next: NextFunc
         total_pages: doc.totalPages ?? pagesCount,
         screenshots_generated: pagesCount,
         chunks_created: doc.chunksCount ?? chunksCount,
-        current_stage: currentStage,
+        processing_stage: doc.processingStage ?? 'pending',
       },
       created_at: doc.createdAt.toISOString(),
       updated_at: doc.updatedAt.toISOString(),

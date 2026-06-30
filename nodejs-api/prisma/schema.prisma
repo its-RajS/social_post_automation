@@ -47,10 +47,13 @@ model Document {
   updatedAt              DateTime       @updatedAt @map("updated_at") @db.Timestamptz
   processingStartedAt    DateTime?      @map("processing_started_at") @db.Timestamptz
   processingCompletedAt  DateTime?      @map("processing_completed_at") @db.Timestamptz
+  processingStage        String?        @default("pending") @map("processing_stage") @db.VarChar(50)
 
-  pages          Page[]
-  chunks         Chunk[]
-  processingJobs ProcessingJob[]
+  pages              Page[]
+  chunks             Chunk[]
+  processingJobs     ProcessingJob[]
+  knowledgeGraphJobs KnowledgeGraphJob[]
+  pageAnalysisJobs   PageAnalysisJob[]
 
   @@map("documents")
 }
@@ -68,6 +71,26 @@ model Page {
   hasCharts    Boolean   @default(false) @map("has_charts")
   wordCount    Int?      @map("word_count")
   createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  // Module 3: page analysis & scoring
+  mainTopic          String?   @map("main_topic") @db.VarChar(255)
+  contentType        String?   @map("content_type") @db.VarChar(50)
+  businessValue      Decimal?  @map("business_value") @db.Decimal(3, 2)
+  audience           String[]  @map("audience")
+  painPoints         String[]  @map("pain_points")
+  productRelevance   Decimal?  @map("product_relevance") @db.Decimal(3, 2)
+  visualQualityScore Decimal?  @map("visual_quality_score") @db.Decimal(3, 2)
+  textDensity        Decimal?  @map("text_density") @db.Decimal(3, 2)
+  hasChart           Boolean?  @default(false) @map("has_chart")
+  hasStat            Boolean?  @default(false) @map("has_stat")
+  templateFit        String[]  @map("template_fit")
+  confidentialRisk   Decimal?  @map("confidential_risk") @db.Decimal(3, 2)
+  postPotentialScore Decimal?  @map("post_potential_score") @db.Decimal(3, 2)
+  uniquenessScore    Decimal?  @map("uniqueness_score") @db.Decimal(3, 2)
+  duplicatePenalty   Decimal?  @map("duplicate_penalty") @db.Decimal(3, 2)
+  analysisStatus     String    @default("pending") @map("analysis_status") @db.VarChar(50)
+  selectedForPost    Boolean   @default(false) @map("selected_for_post")
+  analysisError      String?   @map("analysis_error")
 
   document Document @relation(fields: [docId], references: [id], onDelete: Cascade)
   chunks   Chunk[]
@@ -109,4 +132,30 @@ model ProcessingJob {
   document Document @relation(fields: [docId], references: [id], onDelete: Cascade)
 
   @@map("processing_jobs")
+}
+
+model KnowledgeGraphJob {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  docId     String   @map("doc_id") @db.Uuid
+  status    String   @db.VarChar(50)
+  error     String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  document Document @relation(fields: [docId], references: [id], onDelete: Cascade)
+
+  @@map("knowledge_graph_jobs")
+}
+
+model PageAnalysisJob {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  docId     String   @map("doc_id") @db.Uuid
+  status    String   @db.VarChar(50)
+  error     String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  document Document @relation(fields: [docId], references: [id], onDelete: Cascade)
+
+  @@map("page_analysis_jobs")
 }

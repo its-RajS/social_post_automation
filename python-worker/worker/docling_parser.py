@@ -1,4 +1,6 @@
 import logging
+logging.getLogger('docling.models.stages.ocr.rapid_ocr_model').setLevel(logging.ERROR)
+logging.getLogger('RapidOCR').setLevel(logging.ERROR)
 from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling.datamodel.base_models import InputFormat

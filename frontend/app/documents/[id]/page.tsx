@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { getDocumentStatus } from '@/lib/api'
 import { ProgressPanel } from '@/components/ProgressPanel'
-import { PageGrid } from '@/components/PageGrid'
+import { AnalysisTabs } from '@/components/AnalysisTabs'
 import { CopyButton } from '@/components/CopyButton'
 
 interface Props {
@@ -59,10 +59,7 @@ export default async function DocumentPage({ params }: Props) {
 
           {/* Right panel */}
           <div className="rounded-xl border border-[#E9ECEF] bg-white p-6 shadow-sm">
-            <h2 className="mb-4 text-sm font-medium text-[#6C757D] uppercase tracking-wide">
-              Pages
-            </h2>
-            <PageGrid docId={id} status={initial.status} />
+            <AnalysisTabs docId={id} status={initial.status} />
           </div>
         </div>
       </div>

@@ -2,8 +2,8 @@ How to Start the System
 
 cd automation/
 
-# 1. Start infra (postgres, redis, minio, chroma)
-docker compose up -d postgres redis minio chroma
+# 1. Start infra (postgres, redis, minio, chroma, neo4j)
+docker compose up -d postgres redis minio chroma neo4j
 
 # 2. Run DB migration (first time only)
 cd nodejs-api && DATABASE_URL="postgresql://user:pass@localhost:5432/linkedin_automation" npx prisma migrate deploy && cd ..
@@ -12,30 +12,31 @@ cd nodejs-api && DATABASE_URL="postgresql://user:pass@localhost:5432/linkedin_au
 docker compose up --build -d
 
 # 4. Verify
-curl localhost:3000/health          # → {"ok":true}
-curl localhost:8001/health          # → {"ok":true,"redis":true,"db":true}
+
+curl localhost:3000/health          # Node API       → {"ok":true}
+curl localhost:8001/health          # M1 worker      → {"ok":true,"redis":true,"db":true}
+curl localhost:8002/health          # M2 knowledge   → {"ok":true,"db":true,"neo4j":true}
+curl localhost:8003/health          # M3 page-analysis → {"ok":true,"db":true}
 
 
-Start everything:
+---
+Start everything (quick):
 
-# 1. Infra + API + Python worker
 cd /home/its-raj/Projects/sgp-india/automation
 docker compose up -d
-
-# 2. Frontend (separate terminal)
-cd /home/its-raj/Projects/sgp-india/automation/frontend
-npm run dev -- -p 3001
-
+`
 ---
 Check logs:
 
 # All services at once (follow)
-cd /home/its-raj/Projects/sgp-india/automation
 docker compose logs -f
 
 # Individual services
 docker compose logs -f api
 docker compose logs -f python-worker
+docker compose logs -f knowledge-graph
+docker compose logs -f page-analysis
+docker compose logs -f neo4j
 docker compose logs -f postgres
 docker compose logs -f redis
 
@@ -45,13 +46,60 @@ docker compose logs --tail=50 python-worker
 ---
 Quick health check (all at once):
 
-curl -s localhost:3000/health          # Node API
-curl -s localhost:3001                  # Frontend (200 = up)
-docker exec ec1f629336b7_automation-python-worker-1 curl -s localhost:8001/health  # Python worker
-docker compose ps                       # All container states
+curl -s localhost:3000/health          # Node API (M1 gateway)
+curl -s localhost:8001/health          # M1 python-worker
+curl -s localhost:8002/health          # M2 knowledge-graph
+curl -s localhost:8003/health          # M3 page-analysis
+docker compose ps                      # All container states
 
 ---
-Frontend URL: http://localhost:3001
-API URL: http://localhost:3000
-MinIO console: http://localhost:9001 (minioadmin / minioadmin)
-Chroma: http://localhost:8000
+Trigger Module 2 (Knowledge Graph build):
+
+curl -X POST http://localhost:8002/api/v2/graph/build \
+  -H "Content-Type: application/json" \
+  -d '{"doc_id": "<uuid from Module 1>"}'
+
+# Check status
+curl http://localhost:8002/api/v2/graph/status/<job_id>
+# View entities for a doc
+
+curl http://localhost:8002/api/v2/graph/entities/<doc_id>
+
+---
+Trigger Module 3 (Page Analysis & Scoring):
+
+curl -X POST http://localhost:8003/api/v3/pages/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"doc_id": "<uuid from Module 1>"}'
+
+# Check status
+curl http://localhost:8003/api/v3/pages/analyze/status/<job_id>
+
+# View all pages with scores
+curl http://localhost:8003/api/v3/pages/<doc_id>
+
+# View auto-selected pages (score > 0.7)
+curl http://localhost:8003/api/v3/pages/<doc_id>/selected
+
+---
+Service URLs:
+
+API (M1 gateway):    http://localhost:3000
+M1 python-worker:    http://localhost:8001  (internal, no direct upload)
+M2 knowledge-graph:  http://localhost:8002
+M3 page-analysis:    http://localhost:8003
+Neo4j browser:       http://localhost:7474  (neo4j / password123)
+MinIO console:       http://localhost:9001  (minioadmin / minioadmin)
+Chroma:              http://localhost:8000
+
+---
+Module status:
+
+M1 Document Ingestion    ✅ COMPLETE   POST /api/v1/documents/upload
+M2 Knowledge Graph       ✅ COMPLETE   POST /api/v2/graph/build
+M3 Page Analysis         ✅ COMPLETE   POST /api/v3/pages/analyze
+M4 Post Type Class.      ⏳ PENDING
+M5 Template + AI Gen     ⏳ PENDING
+M6 Template Rendering    ⏳ PENDING
+M7 Multiple Post Options ⏳ PENDING
+M8 Designer Dashboard    ⏳ PENDING

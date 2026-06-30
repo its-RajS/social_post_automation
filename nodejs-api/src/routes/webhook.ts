@@ -39,6 +39,76 @@ router.post('/document-processing-complete', webhookAuth, async (req: Request, r
       data: { status: status === 'completed' ? 'completed' : 'failed' },
     });
 
+    if (status === 'completed') {
+      const KG_URL = process.env.KNOWLEDGE_GRAPH_URL ?? 'http://localhost:8002';
+      const PA_URL = process.env.PAGE_ANALYSIS_URL ?? 'http://localhost:8003';
+      void Promise.all([
+        fetch(`${KG_URL}/api/v2/graph/build`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ doc_id }),
+        }).catch((e: Error) => console.error('[auto-trigger] KG failed:', e.message)),
+        fetch(`${PA_URL}/api/v3/pages/analyze`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ doc_id }),
+        }).catch((e: Error) => console.error('[auto-trigger] PA failed:', e.message)),
+      ]);
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/graph-build-complete', webhookAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { doc_id, job_id, status, error } = req.body as {
+      doc_id: string;
+      job_id: string;
+      status: 'completed' | 'failed';
+      error?: string | null;
+    };
+
+    const job = await prisma.knowledgeGraphJob.findUnique({ where: { id: job_id } });
+    if (!job) {
+      res.status(404).json({ error: 'Job not found' });
+      return;
+    }
+
+    await prisma.knowledgeGraphJob.update({
+      where: { id: job_id },
+      data: { status, error: error ?? null },
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/page-analysis-complete', webhookAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { doc_id, job_id, status, selected_pages, error } = req.body as {
+      doc_id: string;
+      job_id: string;
+      status: 'completed' | 'failed';
+      selected_pages?: number;
+      error?: string | null;
+    };
+
+    const job = await prisma.pageAnalysisJob.findUnique({ where: { id: job_id } });
+    if (!job) {
+      res.status(404).json({ error: 'Job not found' });
+      return;
+    }
+
+    await prisma.pageAnalysisJob.update({
+      where: { id: job_id },
+      data: { status, error: error ?? null },
+    });
+
     res.json({ ok: true });
   } catch (err) {
     next(err);

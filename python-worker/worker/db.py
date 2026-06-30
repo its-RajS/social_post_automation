@@ -33,6 +33,7 @@ class Document(Base):
                         onupdate=lambda: datetime.now(timezone.utc))
     processing_started_at = Column(DateTime(timezone=True))
     processing_completed_at = Column(DateTime(timezone=True))
+    processing_stage = Column(String(50), default='pending')
 
 
 class Page(Base):
@@ -83,6 +84,16 @@ class ProcessingJob(Base):
 
 def get_session() -> Session:
     return SessionLocal()
+
+
+def set_doc_stage(db: Session, doc_id: str, stage: str):
+    db.execute(
+        update(Document).where(Document.id == doc_id).values(
+            processing_stage=stage,
+            updated_at=datetime.now(timezone.utc),
+        )
+    )
+    db.commit()
 
 
 def set_doc_status(db: Session, doc_id: str, status: str, **kwargs):

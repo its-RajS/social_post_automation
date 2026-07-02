@@ -53,6 +53,8 @@ class Page(Base):
     analysis_status = Column(String(50), default='pending')
     selected_for_post = Column(Boolean, default=False)
     analysis_error = Column(Text)
+    # Module 4
+    recommended_template = Column(String(100))
 
 
 class PageAnalysisJob(Base):
@@ -114,8 +116,36 @@ def get_latest_job(db: Session, doc_id: str) -> PageAnalysisJob | None:
     ).order_by(PageAnalysisJob.created_at.desc()).first()
 
 
+_CONTENT_TYPE_TO_TEMPLATE = {
+    'stat': 'big_stat_center',
+    'insight': 'big_insight',
+    'problem_solution': 'problem_solution_split',
+    'product_education': 'product_feature_highlight',
+    'case_study': 'case_study_hero',
+    'workflow': 'product_feature_highlight',
+    'quote': 'quote_card',
+    'announcement': 'announcement_card',
+}
+
+
+def classify_templates(db: Session, doc_id: str) -> None:
+    """Module 4: set recommended_template on selected pages based on content_type."""
+    pages = db.query(Page).filter(
+        Page.doc_id == doc_id,
+        Page.selected_for_post == True  # noqa: E712
+    ).all()
+    for p in pages:
+        template = (
+            'product_feature_highlight'
+            if p.page_number == 1
+            else _CONTENT_TYPE_TO_TEMPLATE.get(p.content_type or '', 'doc_screenshot_left_text_right')
+        )
+        db.execute(update(Page).where(Page.id == p.id).values(recommended_template=template))
+    db.commit()
+
+
 def mark_selected_pages(db: Session, doc_id: str, max_pages: int = 10):
-    """Select top N pages with score > 0.5."""
+    """Select top scored pages and always include the analyzed cover page."""
     pages = db.query(Page).filter(
         Page.doc_id == doc_id,
         Page.post_potential_score > 0.5,
@@ -123,6 +153,13 @@ def mark_selected_pages(db: Session, doc_id: str, max_pages: int = 10):
     ).order_by(Page.post_potential_score.desc()).limit(max_pages).all()
 
     selected_ids = {str(p.id) for p in pages}
+    cover_page = db.query(Page).filter(
+        Page.doc_id == doc_id,
+        Page.page_number == 1,
+        Page.analysis_status == 'analyzed',
+    ).first()
+    if cover_page:
+        selected_ids.add(str(cover_page.id))
 
     # Reset all first, then mark selected
     db.execute(update(Page).where(Page.doc_id == doc_id).values(selected_for_post=False))

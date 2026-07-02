@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from sqlalchemy import update as sa_update
-from worker.db import SessionLocal, Page
+from worker.db import SessionLocal, Page, classify_templates, mark_selected_pages
 from worker.scorer import PageScoreInput, compute_score
 
 
@@ -60,18 +60,10 @@ def recompute_doc(db, doc_id: str) -> dict:
 
     db.commit()
 
-    # Re-select top pages
-    candidates = db.query(Page).filter(
-        Page.doc_id == doc_id,
-        Page.post_potential_score > 0.5,
-        Page.analysis_status == 'analyzed',
-    ).order_by(Page.post_potential_score.desc()).limit(10).all()
+    selected_count = mark_selected_pages(db, doc_id)
+    classify_templates(db, doc_id)
 
-    for p in candidates:
-        db.execute(sa_update(Page).where(Page.id == p.id).values(selected_for_post=True))
-    db.commit()
-
-    return {'updated': updated, 'selected': len(candidates)}
+    return {'updated': updated, 'selected': selected_count}
 
 
 def main():

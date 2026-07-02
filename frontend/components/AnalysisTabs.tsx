@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import { PageGrid } from './PageGrid'
 import { KnowledgeGraphPanel } from './KnowledgeGraphPanel'
 import { PageAnalysisPanel } from './PageAnalysisPanel'
+import { PostsPanel } from './PostsPanel'
 
 interface Props {
   docId: string
@@ -16,6 +17,7 @@ const TABS = [
   { id: 'pages', label: 'Pages' },
   { id: 'graph', label: 'Knowledge Graph' },
   { id: 'analysis', label: 'Page Analysis' },
+  { id: 'posts', label: 'Posts' },
 ] as const
 
 type TabId = (typeof TABS)[number]['id']
@@ -54,6 +56,9 @@ export function AnalysisTabs({ docId, status, filename }: Props) {
         )}
         {active === 'analysis' && (
           <PageAnalysisPanel docId={docId} enabled={enabled} />
+        )}
+        {active === 'posts' && (
+          <PostsPanel docId={docId} enabled={enabled} />
         )}
       </div>
     </div>

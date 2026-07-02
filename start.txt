@@ -2,11 +2,15 @@ How to Start the System
 
 cd automation/
 
-# 1. Start infra (postgres, redis, minio, chroma, neo4j)
-docker compose up -d postgres redis minio chroma neo4j
+# 1. Start infra + backend (postgres, redis, minio, chroma, neo4j, api, workers)
+docker compose up -d postgres redis minio chroma neo4j api python-worker knowledge-graph page-analysis
 
-# 2. Run DB migration (first time only)
+# 2. Run DB migration (first time only, or after schema changes)
 cd nodejs-api && DATABASE_URL="postgresql://user:pass@localhost:5432/linkedin_automation" npx prisma migrate deploy && cd ..
+
+# NOTE: Frontend runs on port 3001 (Next.js dev) — API stays on port 3000 (Docker).
+# They MUST be on different ports to avoid proxy self-loop.
+# cd frontend && npm run dev   ← starts on 3001 automatically
 
 # 3. Start everything
 docker compose up --build -d

@@ -23,15 +23,6 @@ POST_THEMES = [
     {'name': 'Carousel', 'description': 'Multi-slide document post', 'template_types': ['carousel']},
 ]
 
-BRAND_RULES = [
-    {'rule_type': 'color', 'description': 'Primary brand color #cb2eba', 'priority': 1},
-    {'rule_type': 'color', 'description': 'Secondary brand color #787496', 'priority': 2},
-    {'rule_type': 'color', 'description': 'Accent color #d8bfd8', 'priority': 3},
-    {'rule_type': 'tone', 'description': 'Professional but approachable tone', 'priority': 1},
-    {'rule_type': 'avoid', 'description': 'No confidential or legal content', 'priority': 1},
-]
-
-
 def _get_driver():
     global _driver
     if _driver is None:
@@ -57,11 +48,6 @@ def seed_static_nodes():
             session.run(
                 'MERGE (t:PostTheme {name: $name}) SET t.description = $description, t.template_types = $template_types',
                 **theme
-            )
-        for rule in BRAND_RULES:
-            session.run(
-                'MERGE (r:BrandRule {rule_type: $rule_type, description: $description}) SET r.priority = $priority',
-                **rule
             )
 
 

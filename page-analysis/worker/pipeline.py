@@ -162,6 +162,9 @@ def run(doc_id: str, job_id: str) -> None:
         # Step 3: Select top pages
         selected_count = database.mark_selected_pages(db, doc_id)
 
+        # Step 4: Module 4 — classify content_type → recommended_template
+        database.classify_templates(db, doc_id)
+
         database.set_job_status(db, job_id, 'completed')
         _send_webhook({
             'doc_id': doc_id, 'job_id': job_id, 'status': 'completed',

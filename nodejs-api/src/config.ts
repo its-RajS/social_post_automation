@@ -15,6 +15,10 @@ const schema = z.object({
   MAX_FILE_SIZE: z.coerce.number().default(104857600),
   ALLOWED_MIME_TYPES: z.string().transform(v => v.split(',').map(s => s.trim())),
   CHROMA_URL: z.string().default('http://localhost:8000'),
+  KNOWLEDGE_GRAPH_URL: z.string().default('http://localhost:8002'),
+  PAGE_ANALYSIS_URL: z.string().default('http://localhost:8003'),
+  CONTENT_SERVICE_URL: z.string().default('http://localhost:8004'),
+  RENDER_SERVICE_URL: z.string().default('http://localhost:8005'),
 });
 
 const parsed = schema.safeParse(process.env);

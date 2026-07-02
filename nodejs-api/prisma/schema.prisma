@@ -54,6 +54,8 @@ model Document {
   processingJobs     ProcessingJob[]
   knowledgeGraphJobs KnowledgeGraphJob[]
   pageAnalysisJobs   PageAnalysisJob[]
+  posts              Post[]
+  postGenerationJobs PostGenerationJob[]
 
   @@map("documents")
 }
@@ -92,8 +94,12 @@ model Page {
   selectedForPost    Boolean   @default(false) @map("selected_for_post")
   analysisError      String?   @map("analysis_error")
 
+  // Module 4: post type classification
+  recommendedTemplate String?  @map("recommended_template") @db.VarChar(100)
+
   document Document @relation(fields: [docId], references: [id], onDelete: Cascade)
   chunks   Chunk[]
+  posts    Post[]
 
   @@unique([docId, pageNumber])
   @@map("pages")
@@ -158,4 +164,63 @@ model PageAnalysisJob {
   document Document @relation(fields: [docId], references: [id], onDelete: Cascade)
 
   @@map("page_analysis_jobs")
+}
+
+model Post {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pageId          String   @map("page_id") @db.Uuid
+  docId           String   @map("doc_id") @db.Uuid
+  status          String   @default("pending") @db.VarChar(50)
+  title           String?
+  subtitle        String?
+  cta             String?
+  caption         String?
+  hashtags        String[]
+  hookAngle       String?  @map("hook_angle") @db.VarChar(50)
+  tone            String?  @db.VarChar(50)
+  templateId      String?  @map("template_id") @db.VarChar(100)
+  templateFields  Json?    @map("template_fields")
+  context         Json?
+  brandCompliance Json?    @map("brand_compliance")
+  variationOf     String?  @map("variation_of") @db.Uuid
+  variationType   String?  @map("variation_type") @db.VarChar(50)
+  imageUrl        String?  @map("image_url")
+  errorMessage    String?  @map("error_message")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  page       Page       @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  document   Document   @relation(fields: [docId], references: [id], onDelete: Cascade)
+  renderJobs RenderJob[]
+
+  @@map("posts")
+}
+
+model PostGenerationJob {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  docId     String   @map("doc_id") @db.Uuid
+  pageId    String   @map("page_id") @db.Uuid
+  postId    String?  @map("post_id") @db.Uuid
+  status    String   @default("queued") @db.VarChar(50)
+  error     String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  document Document @relation(fields: [docId], references: [id], onDelete: Cascade)
+
+  @@map("post_generation_jobs")
+}
+
+model RenderJob {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  postId    String   @map("post_id") @db.Uuid
+  status    String   @default("queued") @db.VarChar(50)
+  imageUrl  String?  @map("image_url")
+  error     String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("render_jobs")
 }

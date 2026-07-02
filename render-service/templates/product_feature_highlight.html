@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  {% if google_fonts_url %}<link href="{{ google_fonts_url }}" rel="stylesheet"/>{% endif %}
+  <style>
+    {{ font_face_css | safe }}
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 1080px;
+      height: 1350px;
+      overflow: hidden;
+      background: {{ background_color }};
+      color: #FFFFFF;
+      font-family: '{{ body_font }}', Arial, sans-serif;
+    }
+    .canvas {
+      position: relative;
+      width: 1080px;
+      height: 1350px;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 78% 74%, rgba(0, 151, 255, 0.14), transparent 30%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0)),
+        {{ background_color }};
+    }
+    .content {
+      position: absolute;
+      left: 92px;
+      top: 88px;
+      width: 760px;
+      z-index: 2;
+    }
+    .eyebrow {
+      font-size: 22px;
+      line-height: 1;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: {{ primary_color }};
+      margin-bottom: 26px;
+      letter-spacing: 0.02em;
+    }
+    .feature-name {
+      font-family: '{{ heading_font }}', Arial, sans-serif;
+      font-size: 72px;
+      line-height: 1.02;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      text-transform: uppercase;
+      color: #FFFFFF;
+      max-width: 760px;
+      text-wrap: balance;
+    }
+    .feature-name .text-highlight {
+      color: {{ primary_color }};
+      font-weight: 700;
+    }
+    .feature-desc .text-highlight,
+    .benefit .text-highlight {
+      color: inherit;
+      font-weight: inherit;
+      border-bottom: 0;
+    }
+    .feature-desc {
+      width: 760px;
+      max-width: 760px;
+      margin-top: 28px;
+      font-size: 28px;
+      line-height: 1.28;
+      font-weight: 500;
+      color: {{ accent_color }};
+      text-wrap: balance;
+    }
+    .cta {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 396px;
+      height: 82px;
+      margin-top: 58px;
+      padding: 0 50px;
+      border: 4px solid rgba(234, 248, 242, 0.9);
+      border-radius: 999px;
+      background: {{ secondary_color }};
+      color: {{ background_color }};
+      font-family: '{{ heading_font }}', Arial, sans-serif;
+      font-size: 29px;
+      line-height: 1;
+      font-weight: 900;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .cta::after {
+      content: '';
+      width: 18px;
+      height: 18px;
+      margin-left: 20px;
+      border-top: 4px solid {{ background_color }};
+      border-right: 4px solid {{ background_color }};
+      transform: rotate(45deg);
+    }
+    .benefits {
+      position: absolute;
+      left: 92px;
+      top: 792px;
+      z-index: 3;
+      width: 470px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .benefit {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      color: {{ accent_color }};
+      font-size: 24px;
+      line-height: 1.3;
+      font-weight: 600;
+      text-wrap: balance;
+    }
+    .benefit .text-highlight {
+      color: inherit;
+    }
+    .benefit::before {
+      content: '';
+      width: 16px;
+      min-width: 16px;
+      height: 16px;
+      margin-top: 7px;
+      border-radius: 50%;
+      background: {{ secondary_color }};
+      box-shadow: 0 0 0 4px rgba(234, 248, 242, 0.28);
+    }
+    .logo {
+      position: absolute;
+      left: 92px;
+      bottom: 88px;
+      z-index: 4;
+      width: 280px;
+    }
+    .logo img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .document {
+      position: absolute;
+      z-index: 1;
+      right: -92px;
+      bottom: -230px;
+      width: 640px;
+      min-height: 820px;
+      background: #FFFFFF;
+      transform: rotate(10deg);
+      transform-origin: center center;
+      box-shadow: 0 42px 90px rgba(5, 14, 34, 0.52);
+      overflow: hidden;
+    }
+    .document img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .document.placeholder {
+      background:
+        linear-gradient(#FFFFFF, #FFFFFF) padding-box,
+        linear-gradient(135deg, {{ accent_color }}, #FFFFFF) border-box;
+      border: 18px solid transparent;
+    }
+    .placeholder-lines {
+      padding: 74px 58px;
+    }
+    .line {
+      height: 16px;
+      margin-bottom: 22px;
+      background: {{ accent_color }};
+    }
+    .line.short { width: 46%; }
+    .line.medium { width: 70%; }
+    .line.long { width: 92%; }
+  </style>
+</head>
+<body>
+  <main class="canvas">
+    <section class="content">
+      <div class="eyebrow">Product Feature</div>
+      <h1 class="feature-name">{{ feature_name | highlight_keywords }}</h1>
+      <p class="feature-desc">{{ feature_description | e }}</p>
+      <div class="cta">{{ cta or "Read Playbook" }}</div>
+    </section>
+
+    <section class="benefits">
+      {% if benefit_bullet_1 %}<div class="benefit">{{ benefit_bullet_1 | e }}</div>{% endif %}
+      {% if benefit_bullet_2 %}<div class="benefit">{{ benefit_bullet_2 | e }}</div>{% endif %}
+      {% if benefit_bullet_3 %}<div class="benefit">{{ benefit_bullet_3 | e }}</div>{% endif %}
+    </section>
+
+    {% if logo_url %}
+      <div class="logo"><img src="{{ logo_url }}" alt="Logo"/></div>
+    {% endif %}
+
+    {% if screenshot_url %}
+      <div class="document"><img src="{{ screenshot_url }}" alt="Document page"/></div>
+    {% else %}
+      <div class="document placeholder">
+        <div class="placeholder-lines">
+          <div class="line short"></div>
+          <div class="line long"></div>
+          <div class="line long"></div>
+          <div class="line medium"></div>
+          <div class="line long"></div>
+          <div class="line short"></div>
+        </div>
+      </div>
+    {% endif %}
+  </main>
+</body>
+</html>

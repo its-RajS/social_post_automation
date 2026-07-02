@@ -1,4 +1,3 @@
-version: '3.8'
 
 services:
   api:
@@ -19,6 +18,10 @@ services:
       - WEBHOOK_SECRET=${WEBHOOK_SECRET:-whsec_your_webhook_secret_here}
       - VECTOR_DB_PROVIDER=chroma
       - CHROMA_URL=http://chroma:8000
+      - KNOWLEDGE_GRAPH_URL=http://knowledge-graph:8002
+      - PAGE_ANALYSIS_URL=http://page-analysis:8003
+      - CONTENT_SERVICE_URL=http://content-service:8004
+      - RENDER_SERVICE_URL=http://render-service:8005
       - MAX_FILE_SIZE=104857600
       - ALLOWED_MIME_TYPES=application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword,image/png,image/jpeg,image/webp,image/tiff,text/html
     depends_on:
@@ -167,6 +170,59 @@ services:
         condition: service_started
       minio:
         condition: service_healthy
+
+  content-service:
+    build: ./content-service
+    ports:
+      - "8004:8004"
+    environment:
+      - DATABASE_URL=postgresql://user:pass@postgres:5432/linkedin_automation
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_MODEL=gpt-4o
+      - KNOWLEDGE_GRAPH_URL=http://knowledge-graph:8002
+      - CHROMA_URL=http://chroma:8000
+      - PAST_POSTS_COLLECTION=company_documents
+      - RENDER_SERVICE_URL=http://render-service:8005
+      - MINIO_ENDPOINT=minio
+      - MINIO_PORT=9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_BUCKET=linkedin-automation
+      - WEBHOOK_URL=http://api:3000/api/v1/webhooks/content-generated
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET:-whsec_your_webhook_secret_here}
+      - BRAND_CONFIG_PATH=/app/brand/brand.json
+    volumes:
+      - ./brand:/app/brand:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      chroma:
+        condition: service_started
+
+  render-service:
+    build: ./render-service
+    ports:
+      - "8005:8005"
+    environment:
+      - DATABASE_URL=postgresql://user:pass@postgres:5432/linkedin_automation
+      - MINIO_ENDPOINT=minio
+      - MINIO_PORT=9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_BUCKET=linkedin-automation
+      - TEMPLATES_DIR=/app/templates
+      - BRAND_CONFIG_PATH=/app/brand/brand.json
+    volumes:
+      - ./brand:/app/brand:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 2G
 
 volumes:
   postgres_data:

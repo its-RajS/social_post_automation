@@ -109,6 +109,55 @@ router.post('/page-analysis-complete', webhookAuth, async (req: Request, res: Re
       data: { status, error: error ?? null },
     });
 
+    // Auto-trigger Module 5: generate posts for each selected page
+    if (status === 'completed') {
+      const CONTENT_URL = process.env.CONTENT_SERVICE_URL ?? 'http://content-service:8004';
+      const selectedPages = await prisma.page.findMany({
+        where: { docId: doc_id, selectedForPost: true },
+        select: { id: true },
+      });
+      void Promise.all(
+        selectedPages.map((p) =>
+          fetch(`${CONTENT_URL}/api/v5/posts/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ doc_id, page_id: p.id }),
+          }).catch((e: Error) => console.error('[auto-trigger] Content gen failed:', e.message)),
+        ),
+      );
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/content-generated', webhookAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { doc_id, page_id, job_id, post_id, status, error } = req.body as {
+      doc_id: string;
+      page_id: string;
+      job_id: string;
+      post_id?: string;
+      status: 'completed' | 'failed';
+      error?: string | null;
+    };
+
+    const job = await prisma.postGenerationJob.findUnique({ where: { id: job_id } });
+    if (!job) {
+      res.status(404).json({ error: 'Job not found' });
+      return;
+    }
+
+    await prisma.postGenerationJob.update({
+      where: { id: job_id },
+      data: { status, error: error ?? null, ...(post_id ? { postId: post_id } : {}) },
+    });
+
+    // Note: render (Module 6) is already auto-triggered by content-service itself
+    // (worker/pipeline.py _trigger_render), no separate trigger needed here.
+
     res.json({ ok: true });
   } catch (err) {
     next(err);

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <link href="{{ google_fonts_url }}" rel="stylesheet"/>
+  <style>
+    {{ font_face_css | safe }}
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 1200px; height: 627px;
+      background: {{ background_color }};
+      font-family: '{{ body_font }}', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      overflow: hidden; position: relative;
+    }
+    .diagonal-shape {
+      position: absolute; inset: 0 0 0 auto; width: 54%; height: 100%;
+      background: rgba(0,0,0,0.16);
+      clip-path: polygon(24% 0, 100% 0, 100% 100%, 0 100%);
+      z-index: 0;
+    }
+    .container {
+      width: 100%; height: 100%; position: relative; z-index: 1;
+      display: flex; flex-direction: column;
+      justify-content: space-between; padding: 80px;
+    }
+    .content { max-width: 580px; }
+    .headline {
+      font-family: '{{ heading_font }}', sans-serif;
+      font-size: 72px; font-weight: 700; color: #FFFFFF;
+      text-transform: uppercase; line-height: 1.05; letter-spacing: -0.02em;
+    }
+    .subheadline {
+      font-family: '{{ body_font }}', sans-serif;
+      font-size: 28px; font-weight: 400;
+      color: {{ secondary_color }};
+      margin-top: 24px; line-height: 1.35;
+    }
+    .cta-button {
+      display: inline-flex; align-items: center; gap: 10px;
+      margin-top: 40px; padding: 14px 34px;
+      background: #FFFFFF; color: {{ primary_color }};
+      border-radius: 50px;
+      font-size: 15px; font-weight: 600; letter-spacing: 0;
+    }
+    .cta-button::after { content: ">"; font-size: 17px; }
+    .logo { position: absolute; bottom: 42px; left: 80px; z-index: 2; }
+    .logo img { width: 116px; height: auto; display: block; }
+    .logo-placeholder {
+      width: 116px; height: 34px;
+      background: rgba(255,255,255,0.22); border-radius: 4px;
+    }
+    .screenshot-mockup {
+      position: absolute; bottom: 34px; right: 70px; width: 460px; z-index: 1;
+      transform: perspective(900px) rotateY(-14deg) rotateX(4deg);
+      box-shadow: 0 30px 60px rgba(0,0,0,0.35);
+      border-radius: 6px; overflow: hidden; background: white;
+    }
+    .screenshot-mockup img { width: 100%; height: auto; display: block; }
+  </style>
+</head>
+<body>
+  <div class="diagonal-shape"></div>
+  <div class="container">
+    <div class="content">
+      <div class="headline">{{ title }}</div>
+      <div class="subheadline">{{ subtitle }}</div>
+      <div class="cta-button">{{ cta | default('Learn More') }}</div>
+    </div>
+  </div>
+  <div class="logo">
+    {% if logo_url %}<img src="{{ logo_url }}" alt="Logo"/>{% else %}<div class="logo-placeholder"></div>{% endif %}
+  </div>
+  {% if screenshot_url %}
+  <div class="screenshot-mockup">
+    <img src="{{ screenshot_url }}" alt="Document preview"/>
+  </div>
+  {% endif %}
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <link href="{{ google_fonts_url }}" rel="stylesheet"/>
+  <style>
+    {{ font_face_css | safe }}
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 1200px; height: 627px;
+      background: {{ background_color }};
+      font-family: '{{ body_font }}', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden; position: relative; color: #FFFFFF;
+    }
+    .glow {
+      position: absolute; width: 620px; height: 620px; border-radius: 50%;
+      background: radial-gradient(circle, {{ primary_color }}26 0%, transparent 70%);
+    }
+    .content { position: relative; text-align: center; max-width: 880px; padding: 0 64px; }
+    .stat-value { 
+      font-family: '{{ heading_font }}', sans-serif;
+      font-size: 140px; font-weight: 700; line-height: 0.95; color: #FFFFFF; letter-spacing: -0.04em; 
+    }
+    .stat-label { 
+      font-family: '{{ heading_font }}', sans-serif;
+      font-size: 42px; font-weight: 700; line-height: 1.15; margin-top: 24px; color: {{ secondary_color }}; 
+    }
+    .subtitle { 
+      font-family: '{{ body_font }}', sans-serif;
+      font-size: 24px; line-height: 1.45; margin-top: 22px; color: rgba(255,255,255,0.85); 
+    }
+    .source { margin-top: 34px; font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; opacity: 0.62; }
+    .logo { position: absolute; bottom: 40px; left: 56px; }
+    .logo img { width: 108px; height: auto; opacity: 0.72; display: block; }
+  </style>
+</head>
+<body>
+  <div class="glow"></div>
+  <div class="content">
+    <div class="stat-value">{{ stat_value }}</div>
+    <div class="stat-label">{{ stat_label }}</div>
+    {% if subtitle %}<div class="subtitle">{{ subtitle }}</div>{% endif %}
+    {% if source_label %}<div class="source">{{ source_label }}</div>{% endif %}
+  </div>
+  {% if logo_url %}<div class="logo"><img src="{{ logo_url }}" alt="Logo"/></div>{% endif %}
+</body>
+</html>

@@ -6,11 +6,11 @@ import sqlalchemy
 from dotenv import load_dotenv
 load_dotenv()
 
-from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI, Header, HTTPException
 from pydantic import BaseModel
 
 from worker import db as database
-from worker.renderer import render
+from worker.renderer import build_publication_pdf, render
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(name)s %(levelname)s %(message)s')
 logger = logging.getLogger(__name__)
@@ -35,6 +35,11 @@ class RenderRequest(BaseModel):
     post_id: str
     template_id: str
     fields: dict
+
+
+class PublicationPdfRequest(BaseModel):
+    publication_id: str
+    image_paths: list[str]
 
 
 def _run_render(post_id: str, template_id: str, fields: dict, job_id: str) -> None:
@@ -84,6 +89,20 @@ async def get_status(render_job_id: str):
         }
     finally:
         db.close()
+
+
+@app.post('/api/v6/publications/pdf')
+async def publication_pdf(req: PublicationPdfRequest, x_webhook_secret: str | None = Header(default=None)):
+    if x_webhook_secret != os.environ.get('WEBHOOK_SECRET', ''):
+        raise HTTPException(status_code=401, detail='Invalid webhook secret')
+    if len(req.image_paths) < 3:
+        raise HTTPException(status_code=422, detail='At least three images are required')
+    try:
+        storage_path = build_publication_pdf(req.publication_id, req.image_paths)
+        return {'publication_id': req.publication_id, 'storage_path': storage_path}
+    except Exception as exc:
+        logger.exception('Publication PDF failed for %s', req.publication_id)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 if __name__ == '__main__':

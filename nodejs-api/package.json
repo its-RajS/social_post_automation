@@ -7,10 +7,12 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev"
+    "db:migrate": "prisma migrate dev",
+    "test": "tsx --test src/**/*.test.ts",
+    "admin:hash-password": "node scripts/hash-admin-password.mjs"
   },
   "dependencies": {
-    "@prisma/client": "^5.22.0",
+    "@prisma/client": "^6.19.3",
     "bullmq": "^5.15.0",
     "express": "^4.21.1",
     "minio": "^8.0.1",
@@ -21,7 +23,7 @@
     "@types/express": "^5.0.0",
     "@types/multer": "^1.4.12",
     "@types/node": "^22.9.0",
-    "prisma": "^5.22.0",
+    "prisma": "^6.19.3",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3"
   }

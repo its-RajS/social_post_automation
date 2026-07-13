@@ -18,8 +18,11 @@ export function useSSE({ docId, onUpdate, onDone, enabled = true }: UseSSEOption
   const esRef = useRef<EventSource | null>(null)
   const onUpdateRef = useRef(onUpdate)
   const onDoneRef = useRef(onDone)
-  onUpdateRef.current = onUpdate
-  onDoneRef.current = onDone
+
+  useEffect(() => {
+    onUpdateRef.current = onUpdate
+    onDoneRef.current = onDone
+  }, [onUpdate, onDone])
 
   const close = useCallback(() => {
     esRef.current?.close()

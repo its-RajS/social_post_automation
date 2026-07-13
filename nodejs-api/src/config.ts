@@ -19,6 +19,24 @@ const schema = z.object({
   PAGE_ANALYSIS_URL: z.string().default('http://localhost:8003'),
   CONTENT_SERVICE_URL: z.string().default('http://localhost:8004'),
   RENDER_SERVICE_URL: z.string().default('http://localhost:8005'),
+  FRONTEND_URL: z.string().default('http://localhost:3001'),
+  ADMIN_EMAIL: z.string().email().default('admin@example.com'),
+  ADMIN_PASSWORD: z.string().min(8).default('change-me-now'),
+  ADMIN_PASSWORD_HASH: z.string().optional(),
+  SESSION_TTL_HOURS: z.coerce.number().positive().default(8),
+  LINKEDIN_CLIENT_ID: z.string().default(''),
+  LINKEDIN_CLIENT_SECRET: z.string().default(''),
+  LINKEDIN_REDIRECT_URI: z.string().default('http://localhost:3001/api/v1/linkedin/oauth/callback'),
+  LINKEDIN_API_VERSION: z.string().regex(/^\d{6}$/).default('202606'),
+  TOKEN_ENCRYPTION_KEY: z.string().min(32).default('development-only-change-this-key'),
+}).superRefine((value, ctx) => {
+  if (value.NODE_ENV !== 'production') return;
+  if (!value.ADMIN_PASSWORD_HASH) {
+    ctx.addIssue({ code: 'custom', path: ['ADMIN_PASSWORD_HASH'], message: 'Required in production' });
+  }
+  if (value.TOKEN_ENCRYPTION_KEY === 'development-only-change-this-key') {
+    ctx.addIssue({ code: 'custom', path: ['TOKEN_ENCRYPTION_KEY'], message: 'Must be changed in production' });
+  }
 });
 
 const parsed = schema.safeParse(process.env);

@@ -1,4 +1,5 @@
 import base64
+import io
 import re
 import logging
 import os
@@ -14,6 +15,7 @@ load_brand()
 import boto3
 from jinja2 import Environment, FileSystemLoader
 from playwright.sync_api import sync_playwright
+from PIL import Image
 
 logger = logging.getLogger(__name__)
 
@@ -173,3 +175,32 @@ def render(post_id: str, template_id: str, fields: dict) -> str:
         browser.close()
 
     return _upload_png(post_id, png_bytes)
+
+
+def build_publication_pdf(publication_id: str, image_paths: list[str]) -> str:
+    """Build a multi-page PDF in the supplied order, preserving each image's dimensions."""
+    pages: list[Image.Image] = []
+    try:
+        for image_path in image_paths:
+            obj = _get_s3().get_object(Bucket=MINIO_BUCKET, Key=image_path)
+            data = obj['Body'].read()
+            page = Image.open(io.BytesIO(data)).convert('RGB')
+            pages.append(page)
+        if len(pages) < 3:
+            raise ValueError('At least three rendered images are required')
+        output = io.BytesIO()
+        pages[0].save(output, format='PDF', save_all=True, append_images=pages[1:], resolution=96.0)
+        payload = output.getvalue()
+        if len(payload) > 100 * 1024 * 1024:
+            raise ValueError('LinkedIn documents must not exceed 100 MB')
+        key = f'publications/{publication_id}/carousel.pdf'
+        _get_s3().put_object(
+            Bucket=MINIO_BUCKET,
+            Key=key,
+            Body=payload,
+            ContentType='application/pdf',
+        )
+        return key
+    finally:
+        for page in pages:
+            page.close()

@@ -3,7 +3,7 @@ services:
   api:
     build: ./nodejs-api
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     environment:
       - PORT=3000
       - NODE_ENV=development
@@ -22,6 +22,16 @@ services:
       - PAGE_ANALYSIS_URL=http://page-analysis:8003
       - CONTENT_SERVICE_URL=http://content-service:8004
       - RENDER_SERVICE_URL=http://render-service:8005
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3001}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@example.com}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-change-me-now}
+      - ADMIN_PASSWORD_HASH=${ADMIN_PASSWORD_HASH:-}
+      - SESSION_TTL_HOURS=${SESSION_TTL_HOURS:-8}
+      - LINKEDIN_CLIENT_ID=${LINKEDIN_CLIENT_ID:-}
+      - LINKEDIN_CLIENT_SECRET=${LINKEDIN_CLIENT_SECRET:-}
+      - LINKEDIN_REDIRECT_URI=${LINKEDIN_REDIRECT_URI:-http://localhost:3001/api/v1/linkedin/oauth/callback}
+      - LINKEDIN_API_VERSION=${LINKEDIN_API_VERSION:-202606}
+      - TOKEN_ENCRYPTION_KEY=${TOKEN_ENCRYPTION_KEY:-development-only-change-this-key}
       - MAX_FILE_SIZE=104857600
       - ALLOWED_MIME_TYPES=application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword,image/png,image/jpeg,image/webp,image/tiff,text/html
     depends_on:
@@ -174,14 +184,14 @@ services:
   content-service:
     build: ./content-service
     ports:
-      - "8004:8004"
+      - "127.0.0.1:8004:8004"
     environment:
       - DATABASE_URL=postgresql://user:pass@postgres:5432/linkedin_automation
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - OPENAI_MODEL=gpt-4o
       - KNOWLEDGE_GRAPH_URL=http://knowledge-graph:8002
       - CHROMA_URL=http://chroma:8000
-      - PAST_POSTS_COLLECTION=company_documents
+      - POST_FEEDBACK_COLLECTION=post_review_feedback
       - RENDER_SERVICE_URL=http://render-service:8005
       - MINIO_ENDPOINT=minio
       - MINIO_PORT=9000
@@ -202,7 +212,7 @@ services:
   render-service:
     build: ./render-service
     ports:
-      - "8005:8005"
+      - "127.0.0.1:8005:8005"
     environment:
       - DATABASE_URL=postgresql://user:pass@postgres:5432/linkedin_automation
       - MINIO_ENDPOINT=minio
@@ -212,6 +222,7 @@ services:
       - MINIO_BUCKET=linkedin-automation
       - TEMPLATES_DIR=/app/templates
       - BRAND_CONFIG_PATH=/app/brand/brand.json
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET:-whsec_your_webhook_secret_here}
     volumes:
       - ./brand:/app/brand:ro
     depends_on:

@@ -43,7 +43,7 @@ export default async function DocumentPage({ params }: Props) {
           {/* Left panel */}
           <div className="flex flex-col gap-6">
             <div className="rounded-xl border border-[#E9ECEF] bg-white p-6 shadow-sm">
-              <ProgressPanel docId={id} initial={initial} />
+              <ProgressPanel docId={id} initialStatus={initial} />
             </div>
 
             <div className="rounded-xl border border-[#E9ECEF] bg-white p-4 shadow-sm">
@@ -66,4 +66,3 @@ export default async function DocumentPage({ params }: Props) {
     </main>
   )
 }
-

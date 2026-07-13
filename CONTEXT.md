@@ -23,3 +23,16 @@ _Avoid_: Hardcoded prompt rules
 **Brand Compliance Metadata**:
 The record of which Brand Voice Rules were considered for a generated post. It is not an enforcement result unless violations are explicitly populated.
 _Avoid_: Brand enforcement, compliance engine
+
+**Daily Collection**:
+The immutable India-calendar date assigned when a generated post is created. Review and publication history remain attached to this date.
+
+**Review Decision**:
+The designer's reversible Pending, Approved, or Rejected judgement. Approved and Rejected decisions become template-specific generation feedback.
+
+**Publication**:
+An ordered selection of approved posts prepared for one LinkedIn destination. One item is a single-image publication; three or more items form a PDF Document Post.
+_Avoid_: Carousel (LinkedIn reserves that API term for sponsored content)
+
+**Document Post**:
+A LinkedIn publication whose media is a generated multi-page PDF assembled from approved post images.

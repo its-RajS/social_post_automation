@@ -6,10 +6,11 @@ import sqlalchemy
 from dotenv import load_dotenv
 load_dotenv()
 
-from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI, Header, HTTPException
 from pydantic import BaseModel
 
 from worker import db as database, pipeline
+from worker.generator import generate_publication_caption, index_review_feedback
 from worker.minio_client import presign
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(name)s %(levelname)s %(message)s')
@@ -111,6 +112,50 @@ async def regenerate(post_id: str, req: RegenerateRequest, background_tasks: Bac
     opts = {'tone': req.tone, 'hook_angle': req.hook_angle, 'variation': req.variation}
     background_tasks.add_task(pipeline.run, page_id, doc_id, job_id, opts)
     return {'job_id': job_id, 'status': 'queued', 'variation_of': post_id}
+
+
+class FeedbackRequest(BaseModel):
+    post_id: str
+    review_status: str
+
+
+@app.post('/api/v5/feedback/index')
+async def index_feedback(req: FeedbackRequest, x_webhook_secret: str | None = Header(default=None)):
+    if x_webhook_secret != os.environ.get('WEBHOOK_SECRET', ''):
+        raise HTTPException(status_code=401, detail='Invalid webhook secret')
+    if req.review_status not in {'PENDING', 'APPROVED', 'REJECTED'}:
+        raise HTTPException(status_code=422, detail='Invalid review status')
+    db = database.get_session()
+    try:
+        post = database.get_post(db, req.post_id)
+        if not post:
+            raise HTTPException(status_code=404, detail='Post not found')
+        if post.review_status != req.review_status:
+            return {'ok': True, 'stale': True, 'post_id': req.post_id, 'review_status': post.review_status}
+        index_review_feedback(post, post.review_status)
+        return {'ok': True, 'post_id': req.post_id, 'review_status': post.review_status}
+    finally:
+        db.close()
+
+
+class PublicationCaptionRequest(BaseModel):
+    post_ids: list[str]
+
+
+@app.post('/api/v5/publications/caption')
+async def publication_caption(req: PublicationCaptionRequest, x_webhook_secret: str | None = Header(default=None)):
+    if x_webhook_secret != os.environ.get('WEBHOOK_SECRET', ''):
+        raise HTTPException(status_code=401, detail='Invalid webhook secret')
+    if len(req.post_ids) < 3:
+        raise HTTPException(status_code=422, detail='At least three posts are required')
+    db = database.get_session()
+    try:
+        posts = database.get_posts(db, req.post_ids)
+        if len(posts) != len(req.post_ids):
+            raise HTTPException(status_code=404, detail='One or more posts were not found')
+        return generate_publication_caption(posts)
+    finally:
+        db.close()
 
 
 if __name__ == '__main__':

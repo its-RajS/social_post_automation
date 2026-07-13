@@ -33,21 +33,54 @@ enum ChunkType {
   ImageCaption
 }
 
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum FeedbackIndexStatus {
+  NOT_INDEXED
+  QUEUED
+  INDEXED
+  FAILED
+}
+
+enum PublicationFormat {
+  SINGLE_IMAGE
+  PDF_DOCUMENT
+}
+
+enum PublicationState {
+  PREPARING
+  READY
+  PUBLISHING
+  PUBLISHED
+  FAILED
+  VERIFICATION_REQUIRED
+  CANCELLED
+}
+
+enum LinkedInDestinationType {
+  MEMBER
+  ORGANIZATION
+}
+
 model Document {
-  id                     String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  originalFilename       String         @map("original_filename") @db.VarChar(255)
-  mimeType               String         @map("mime_type") @db.VarChar(100)
-  fileSizeBytes          BigInt?        @map("file_size_bytes")
-  storagePath            String         @map("storage_path") @db.VarChar(500)
-  status                 DocumentStatus @default(pending)
-  totalPages             Int?           @map("total_pages")
-  chunksCount            Int?           @map("chunks_count")
-  errorMessage           String?        @map("error_message")
-  createdAt              DateTime       @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt              DateTime       @updatedAt @map("updated_at") @db.Timestamptz
-  processingStartedAt    DateTime?      @map("processing_started_at") @db.Timestamptz
-  processingCompletedAt  DateTime?      @map("processing_completed_at") @db.Timestamptz
-  processingStage        String?        @default("pending") @map("processing_stage") @db.VarChar(50)
+  id                    String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  originalFilename      String         @map("original_filename") @db.VarChar(255)
+  mimeType              String         @map("mime_type") @db.VarChar(100)
+  fileSizeBytes         BigInt?        @map("file_size_bytes")
+  storagePath           String         @map("storage_path") @db.VarChar(500)
+  status                DocumentStatus @default(pending)
+  totalPages            Int?           @map("total_pages")
+  chunksCount           Int?           @map("chunks_count")
+  errorMessage          String?        @map("error_message")
+  createdAt             DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt             DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+  processingStartedAt   DateTime?      @map("processing_started_at") @db.Timestamptz
+  processingCompletedAt DateTime?      @map("processing_completed_at") @db.Timestamptz
+  processingStage       String?        @default("pending") @map("processing_stage") @db.VarChar(50)
 
   pages              Page[]
   chunks             Chunk[]
@@ -61,41 +94,41 @@ model Document {
 }
 
 model Page {
-  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  docId        String    @map("doc_id") @db.Uuid
-  pageNumber   Int       @map("page_number")
-  textContent  String?   @map("text_content")
-  ocrText      String?   @map("ocr_text")
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  docId         String   @map("doc_id") @db.Uuid
+  pageNumber    Int      @map("page_number")
+  textContent   String?  @map("text_content")
+  ocrText       String?  @map("ocr_text")
   screenshotUrl String?  @map("screenshot_url") @db.VarChar(500)
-  layoutJson   Json?     @map("layout_json")
-  hasTables    Boolean   @default(false) @map("has_tables")
-  hasImages    Boolean   @default(false) @map("has_images")
-  hasCharts    Boolean   @default(false) @map("has_charts")
-  wordCount    Int?      @map("word_count")
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  layoutJson    Json?    @map("layout_json")
+  hasTables     Boolean  @default(false) @map("has_tables")
+  hasImages     Boolean  @default(false) @map("has_images")
+  hasCharts     Boolean  @default(false) @map("has_charts")
+  wordCount     Int?     @map("word_count")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   // Module 3: page analysis & scoring
-  mainTopic          String?   @map("main_topic") @db.VarChar(255)
-  contentType        String?   @map("content_type") @db.VarChar(50)
-  businessValue      Decimal?  @map("business_value") @db.Decimal(3, 2)
-  audience           String[]  @map("audience")
-  painPoints         String[]  @map("pain_points")
-  productRelevance   Decimal?  @map("product_relevance") @db.Decimal(3, 2)
-  visualQualityScore Decimal?  @map("visual_quality_score") @db.Decimal(3, 2)
-  textDensity        Decimal?  @map("text_density") @db.Decimal(3, 2)
-  hasChart           Boolean?  @default(false) @map("has_chart")
-  hasStat            Boolean?  @default(false) @map("has_stat")
-  templateFit        String[]  @map("template_fit")
-  confidentialRisk   Decimal?  @map("confidential_risk") @db.Decimal(3, 2)
-  postPotentialScore Decimal?  @map("post_potential_score") @db.Decimal(3, 2)
-  uniquenessScore    Decimal?  @map("uniqueness_score") @db.Decimal(3, 2)
-  duplicatePenalty   Decimal?  @map("duplicate_penalty") @db.Decimal(3, 2)
-  analysisStatus     String    @default("pending") @map("analysis_status") @db.VarChar(50)
-  selectedForPost    Boolean   @default(false) @map("selected_for_post")
-  analysisError      String?   @map("analysis_error")
+  mainTopic          String?  @map("main_topic") @db.VarChar(255)
+  contentType        String?  @map("content_type") @db.VarChar(50)
+  businessValue      Decimal? @map("business_value") @db.Decimal(3, 2)
+  audience           String[] @map("audience")
+  painPoints         String[] @map("pain_points")
+  productRelevance   Decimal? @map("product_relevance") @db.Decimal(3, 2)
+  visualQualityScore Decimal? @map("visual_quality_score") @db.Decimal(3, 2)
+  textDensity        Decimal? @map("text_density") @db.Decimal(3, 2)
+  hasChart           Boolean? @default(false) @map("has_chart")
+  hasStat            Boolean? @default(false) @map("has_stat")
+  templateFit        String[] @map("template_fit")
+  confidentialRisk   Decimal? @map("confidential_risk") @db.Decimal(3, 2)
+  postPotentialScore Decimal? @map("post_potential_score") @db.Decimal(3, 2)
+  uniquenessScore    Decimal? @map("uniqueness_score") @db.Decimal(3, 2)
+  duplicatePenalty   Decimal? @map("duplicate_penalty") @db.Decimal(3, 2)
+  analysisStatus     String   @default("pending") @map("analysis_status") @db.VarChar(50)
+  selectedForPost    Boolean  @default(false) @map("selected_for_post")
+  analysisError      String?  @map("analysis_error")
 
   // Module 4: post type classification
-  recommendedTemplate String?  @map("recommended_template") @db.VarChar(100)
+  recommendedTemplate String? @map("recommended_template") @db.VarChar(100)
 
   document Document @relation(fields: [docId], references: [id], onDelete: Cascade)
   chunks   Chunk[]
@@ -167,33 +200,119 @@ model PageAnalysisJob {
 }
 
 model Post {
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  pageId          String   @map("page_id") @db.Uuid
-  docId           String   @map("doc_id") @db.Uuid
-  status          String   @default("pending") @db.VarChar(50)
-  title           String?
-  subtitle        String?
-  cta             String?
-  caption         String?
-  hashtags        String[]
-  hookAngle       String?  @map("hook_angle") @db.VarChar(50)
-  tone            String?  @db.VarChar(50)
-  templateId      String?  @map("template_id") @db.VarChar(100)
-  templateFields  Json?    @map("template_fields")
-  context         Json?
-  brandCompliance Json?    @map("brand_compliance")
-  variationOf     String?  @map("variation_of") @db.Uuid
-  variationType   String?  @map("variation_type") @db.VarChar(50)
-  imageUrl        String?  @map("image_url")
-  errorMessage    String?  @map("error_message")
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  id                  String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pageId              String              @map("page_id") @db.Uuid
+  docId               String              @map("doc_id") @db.Uuid
+  status              String              @default("pending") @db.VarChar(50)
+  title               String?
+  subtitle            String?
+  cta                 String?
+  caption             String?
+  hashtags            String[]
+  hookAngle           String?             @map("hook_angle") @db.VarChar(50)
+  tone                String?             @db.VarChar(50)
+  templateId          String?             @map("template_id") @db.VarChar(100)
+  templateFields      Json?               @map("template_fields")
+  context             Json?
+  brandCompliance     Json?               @map("brand_compliance")
+  variationOf         String?             @map("variation_of") @db.Uuid
+  variationType       String?             @map("variation_type") @db.VarChar(50)
+  imageUrl            String?             @map("image_url")
+  errorMessage        String?             @map("error_message")
+  collectionDate      DateTime            @default(dbgenerated("((CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date)")) @map("collection_date") @db.Date
+  reviewStatus        ReviewStatus        @default(PENDING) @map("review_status")
+  reviewedAt          DateTime?           @map("reviewed_at") @db.Timestamptz
+  feedbackIndexStatus FeedbackIndexStatus @default(NOT_INDEXED) @map("feedback_index_status")
+  createdAt           DateTime            @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt           DateTime            @updatedAt @map("updated_at") @db.Timestamptz
 
-  page       Page       @relation(fields: [pageId], references: [id], onDelete: Cascade)
-  document   Document   @relation(fields: [docId], references: [id], onDelete: Cascade)
-  renderJobs RenderJob[]
+  page             Page              @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  document         Document          @relation(fields: [docId], references: [id], onDelete: Cascade)
+  renderJobs       RenderJob[]
+  publicationItems PublicationItem[]
 
   @@map("posts")
+}
+
+model AdminSession {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tokenHash String   @unique @map("token_hash") @db.VarChar(64)
+  csrfToken String   @map("csrf_token") @db.VarChar(64)
+  expiresAt DateTime @map("expires_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("admin_sessions")
+}
+
+model LinkedInConnection {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  memberUrn             String    @unique @map("member_urn") @db.VarChar(255)
+  displayName           String?   @map("display_name") @db.VarChar(255)
+  accessTokenEncrypted  String    @map("access_token_encrypted")
+  refreshTokenEncrypted String?   @map("refresh_token_encrypted")
+  accessTokenExpiresAt  DateTime  @map("access_token_expires_at") @db.Timestamptz
+  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at") @db.Timestamptz
+  scopes                String[]
+  isActive              Boolean   @default(true) @map("is_active")
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  destinations LinkedInDestination[]
+
+  @@map("linkedin_connections")
+}
+
+model LinkedInDestination {
+  id           String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  connectionId String                  @map("connection_id") @db.Uuid
+  type         LinkedInDestinationType
+  authorUrn    String                  @unique @map("author_urn") @db.VarChar(255)
+  label        String                  @db.VarChar(255)
+  isDefault    Boolean                 @default(false) @map("is_default")
+  createdAt    DateTime                @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime                @updatedAt @map("updated_at") @db.Timestamptz
+
+  connection   LinkedInConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  publications Publication[]
+
+  @@map("linkedin_destinations")
+}
+
+model Publication {
+  id                  String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  destinationId       String            @map("destination_id") @db.Uuid
+  collectionDate      DateTime          @map("collection_date") @db.Date
+  format              PublicationFormat
+  state               PublicationState  @default(PREPARING)
+  title               String?
+  caption             String?
+  hashtags            String[]
+  documentStoragePath String?           @map("document_storage_path")
+  linkedinAssetUrn    String?           @map("linkedin_asset_urn") @db.VarChar(255)
+  linkedinPostUrn     String?           @map("linkedin_post_urn") @db.VarChar(255)
+  errorMessage        String?           @map("error_message")
+  submissionStartedAt DateTime?         @map("submission_started_at") @db.Timestamptz
+  createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt           DateTime          @updatedAt @map("updated_at") @db.Timestamptz
+  publishedAt         DateTime?         @map("published_at") @db.Timestamptz
+
+  destination LinkedInDestination @relation(fields: [destinationId], references: [id])
+  items       PublicationItem[]
+
+  @@map("publications")
+}
+
+model PublicationItem {
+  publicationId String @map("publication_id") @db.Uuid
+  postId        String @map("post_id") @db.Uuid
+  position      Int
+
+  publication Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  post        Post        @relation(fields: [postId], references: [id])
+
+  @@id([publicationId, postId])
+  @@unique([publicationId, position])
+  @@map("publication_items")
 }
 
 model PostGenerationJob {

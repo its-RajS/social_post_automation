@@ -56,6 +56,7 @@ class Post(Base):
     variation_of = Column(UUID(as_uuid=True), nullable=True)
     variation_type = Column(String(50), nullable=True)
     image_url = Column(Text, nullable=True)
+    review_status = Column(String(50), nullable=False, default='PENDING')
     error_message = Column(Text)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc),
@@ -108,6 +109,12 @@ def get_posts_for_doc(db: Session, doc_id: str) -> list[Post]:
 
 def get_post(db: Session, post_id: str) -> Post | None:
     return db.query(Post).filter(Post.id == post_id).first()
+
+
+def get_posts(db: Session, post_ids: list[str]) -> list[Post]:
+    posts = db.query(Post).filter(Post.id.in_(post_ids)).all()
+    by_id = {str(post.id): post for post in posts}
+    return [by_id[post_id] for post_id in post_ids if post_id in by_id]
 
 
 def save_post(db: Session, post_data: dict) -> str:

@@ -77,21 +77,68 @@ def _get_kg_context(page_id: str) -> dict:
     return {}
 
 
-def _get_past_posts(topic: str) -> list[str]:
+def _get_review_feedback(topic: str, template_id: str) -> tuple[list[str], list[str]]:
     chroma_url = os.environ.get('CHROMA_URL', 'http://chroma:8000')
-    collection_name = os.environ.get('PAST_POSTS_COLLECTION', 'company_documents')
+    collection_name = os.environ.get('POST_FEEDBACK_COLLECTION', 'post_review_feedback')
     try:
         import chromadb
         parsed = urlparse(chroma_url)
         client = chromadb.HttpClient(host=parsed.hostname or 'localhost', port=parsed.port or 8000)
         col = client.get_or_create_collection(collection_name)
         if col.count() == 0:
-            return []
-        results = col.query(query_texts=[topic[:500]], n_results=3, include=['documents'])
-        return results.get('documents', [[]])[0]
+            return [], []
+        results = col.query(
+            query_texts=[(topic or 'LinkedIn post')[:500]],
+            n_results=min(12, col.count()),
+            where={'template_id': template_id},
+            include=['documents', 'metadatas'],
+        )
+        approved: list[str] = []
+        rejected: list[str] = []
+        documents = results.get('documents', [[]])[0]
+        metadatas = results.get('metadatas', [[]])[0]
+        for document, metadata in zip(documents, metadatas):
+            if metadata.get('review_status') == 'APPROVED' and len(approved) < 3:
+                approved.append(document)
+            if metadata.get('review_status') == 'REJECTED' and len(rejected) < 3:
+                rejected.append(document)
+        return approved, rejected
     except Exception as e:
-        logger.warning('Chroma past posts unavailable: %s', e)
-    return []
+        logger.warning('Chroma review feedback unavailable: %s', e)
+    return [], []
+
+
+def index_review_feedback(post, review_status: str) -> None:
+    chroma_url = os.environ.get('CHROMA_URL', 'http://chroma:8000')
+    collection_name = os.environ.get('POST_FEEDBACK_COLLECTION', 'post_review_feedback')
+    import chromadb
+    parsed = urlparse(chroma_url)
+    client = chromadb.HttpClient(host=parsed.hostname or 'localhost', port=parsed.port or 8000)
+    col = client.get_or_create_collection(collection_name)
+    post_id = str(post.id)
+    if review_status == 'PENDING':
+        try:
+            col.delete(ids=[post_id])
+        except Exception:
+            pass
+        return
+
+    document = json.dumps({
+        'title': post.title or '',
+        'caption': post.caption or '',
+        'hashtags': post.hashtags or [],
+        'template_fields': post.template_fields or {},
+        'context': post.context or {},
+    }, ensure_ascii=False)
+    col.upsert(
+        ids=[post_id],
+        documents=[document],
+        metadatas=[{
+            'post_id': post_id,
+            'template_id': post.template_id or 'unknown',
+            'review_status': review_status,
+        }],
+    )
 
 
 def generate_content(page, options: dict | None = None) -> dict:
@@ -103,8 +150,9 @@ def generate_content(page, options: dict | None = None) -> dict:
     products = kg.get('products', [])
     benefits = kg.get('benefits', [])
 
-    past_posts = _get_past_posts(page.main_topic or '')
-    past_posts_text = '\n---\n'.join(past_posts) if past_posts else 'None available.'
+    approved_posts, rejected_posts = _get_review_feedback(page.main_topic or '', template_id)
+    approved_posts_text = '\n---\n'.join(approved_posts) if approved_posts else 'None available.'
+    rejected_posts_text = '\n---\n'.join(rejected_posts) if rejected_posts else 'None available.'
 
     template_fields_spec = _TEMPLATE_INSTRUCTIONS.get(template_id, _DEFAULT_INSTRUCTIONS)
     tone_pref = options.get('tone', 'authoritative_empathetic')
@@ -148,8 +196,13 @@ KNOWLEDGE GRAPH:
 Products/Services: {', '.join(products) if products else 'Not available'}
 Benefits: {', '.join(benefits) if benefits else 'Not available'}
 
-PAST POST STYLE REFERENCES:
-{past_posts_text}"""
+APPROVED REFERENCES FOR THIS TEMPLATE:
+Use their high-level structure, clarity, and tone as positive guidance. Never copy wording.
+{approved_posts_text}
+
+REJECTED REFERENCES FOR THIS TEMPLATE:
+Treat these as negative examples. Avoid repeating their content and stylistic patterns. Never copy wording.
+{rejected_posts_text}"""
 
     resp = _get_openai().chat.completions.create(
         model=os.environ.get('OPENAI_MODEL', 'gpt-4o'),
@@ -165,3 +218,31 @@ PAST POST STYLE REFERENCES:
     content['products_mentioned'] = products
     content['benefits_highlighted'] = benefits
     return content
+
+
+def generate_publication_caption(posts: list) -> dict:
+    source = [
+        {
+            'title': post.title,
+            'caption': post.caption,
+            'hashtags': post.hashtags or [],
+            'context': post.context or {},
+        }
+        for post in posts
+    ]
+    response = _get_openai().chat.completions.create(
+        model=os.environ.get('OPENAI_MODEL', 'gpt-4o'),
+        messages=[
+            {
+                'role': 'system',
+                'content': f"""You combine several approved LinkedIn designs into one coherent document post.
+{_brand_rules_prompt()}
+Return valid JSON only with caption (150-300 words), hashtags (3-5 strings including #), and title (max 80 chars).
+Create a connected narrative that follows the supplied page order. Do not mention that AI combined the posts.""",
+            },
+            {'role': 'user', 'content': json.dumps(source, ensure_ascii=False)},
+        ],
+        response_format={'type': 'json_object'},
+        temperature=0.5,
+    )
+    return json.loads(response.choices[0].message.content)

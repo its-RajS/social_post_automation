@@ -30,6 +30,7 @@ services:
       - LINKEDIN_CLIENT_ID=${LINKEDIN_CLIENT_ID:-}
       - LINKEDIN_CLIENT_SECRET=${LINKEDIN_CLIENT_SECRET:-}
       - LINKEDIN_REDIRECT_URI=${LINKEDIN_REDIRECT_URI:-http://localhost:3001/api/v1/linkedin/oauth/callback}
+      - LINKEDIN_SCOPES=${LINKEDIN_SCOPES:-openid profile w_member_social}
       - LINKEDIN_API_VERSION=${LINKEDIN_API_VERSION:-202606}
       - TOKEN_ENCRYPTION_KEY=${TOKEN_ENCRYPTION_KEY:-development-only-change-this-key}
       - MAX_FILE_SIZE=104857600

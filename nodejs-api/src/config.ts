@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { DEFAULT_LINKEDIN_SCOPES, parseLinkedInScopes } from './services/linkedinOAuth';
+
 const schema = z.object({
   PORT: z.coerce.number().default(3000),
   NODE_ENV: z.string().default('development'),
@@ -27,6 +29,7 @@ const schema = z.object({
   LINKEDIN_CLIENT_ID: z.string().default(''),
   LINKEDIN_CLIENT_SECRET: z.string().default(''),
   LINKEDIN_REDIRECT_URI: z.string().default('http://localhost:3001/api/v1/linkedin/oauth/callback'),
+  LINKEDIN_SCOPES: z.string().default(DEFAULT_LINKEDIN_SCOPES.join(' ')).transform(parseLinkedInScopes),
   LINKEDIN_API_VERSION: z.string().regex(/^\d{6}$/).default('202606'),
   TOKEN_ENCRYPTION_KEY: z.string().min(32).default('development-only-change-this-key'),
 }).superRefine((value, ctx) => {

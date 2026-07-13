@@ -1,6 +1,12 @@
 import type { NextConfig } from 'next'
+import path from 'node:path'
 
 const nextConfig: NextConfig = {
+  // Keep Next's bundler rooted at this app. The parent workspace also has a
+  // package-lock.json, which otherwise makes Next infer the wrong root.
+  turbopack: {
+    root: path.resolve(__dirname),
+  },
   async rewrites() {
     return [
       { source: '/api/v1/:path*', destination: 'http://localhost:3000/api/v1/:path*' },

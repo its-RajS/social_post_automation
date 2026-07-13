@@ -9,8 +9,9 @@ The designer dashboard uses LinkedIn's three-legged OAuth flow and publishes onl
 3. Add the exact OAuth redirect URL:
    - Local: `http://localhost:3001/api/v1/linkedin/oauth/callback`
    - Production: `https://<dashboard-host>/api/v1/linkedin/oauth/callback`
-4. Enable the products that grant `openid`, `profile`, `w_member_social`, and `w_organization_social`. Organization publishing requires LinkedIn Community Management API approval.
-5. Copy the Client ID and Client Secret into deployment secrets. Never expose the Client Secret to the frontend.
+4. Request **Sign In with LinkedIn using OpenID Connect** for `openid profile` and **Share on LinkedIn** for `w_member_social`.
+5. Request Community Management API access before enabling `w_organization_social`; this is required for company-page publishing.
+6. Copy the Client ID and Client Secret into deployment secrets. Never expose the Client Secret to the frontend.
 
 ## Environment
 
@@ -20,6 +21,8 @@ Set the values documented in `.env.example`, especially:
 LINKEDIN_CLIENT_ID=...
 LINKEDIN_CLIENT_SECRET=...
 LINKEDIN_REDIRECT_URI=https://<dashboard-host>/api/v1/linkedin/oauth/callback
+# Member/personal publishing (default)
+LINKEDIN_SCOPES=openid profile w_member_social
 LINKEDIN_API_VERSION=202606
 TOKEN_ENCRYPTION_KEY=<at-least-32-random-characters>
 ADMIN_EMAIL=designer@example.com
@@ -43,3 +46,15 @@ npm run admin:hash-password -- "your-production-password"
 4. A personal destination is also retained. Change the default destination from Settings when needed.
 
 Access tokens are encrypted in Postgres. If LinkedIn does not issue a refresh token, the dashboard will require reconnection when the access token expires.
+
+For company-page publishing, add the organization scope only after Community Management API access has been granted:
+
+```dotenv
+LINKEDIN_SCOPES=openid profile w_member_social w_organization_social
+```
+
+After changing scopes, recreate the API container and reconnect LinkedIn so the new consent is issued:
+
+```bash
+docker compose up -d --build --force-recreate api
+```

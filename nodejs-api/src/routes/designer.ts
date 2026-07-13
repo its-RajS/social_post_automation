@@ -5,12 +5,25 @@ import { collectionDateFor, nextReviewStatus, ReviewStatus } from '../domain/des
 import { prisma } from '../db';
 import { AuthenticatedRequest, requireAdmin, requireCsrf } from '../middleware/adminAuth';
 import { enqueueFeedback } from '../services/designerQueue';
-import { presignedUrl } from '../services/minio';
+import { readObject } from '../services/minio';
 
 const router = Router();
 router.use(requireAdmin);
 
 const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+
+router.get('/posts/:id/image', async (req, res, next) => {
+  try {
+    const postId = z.string().uuid().parse(req.params.id);
+    const post = await prisma.post.findUnique({ where: { id: postId }, select: { imageUrl: true } });
+    if (!post?.imageUrl) {
+      res.status(404).json({ error: 'Post image not found' });
+      return;
+    }
+    const image = await readObject(post.imageUrl);
+    res.type('png').set('Cache-Control', 'private, max-age=300').send(image);
+  } catch (error) { next(error); }
+});
 
 router.get('/posts', async (req, res, next) => {
   try {
@@ -42,7 +55,7 @@ router.get('/posts', async (req, res, next) => {
       caption: post.caption,
       hashtags: post.hashtags,
       template_id: post.templateId,
-      image_url: post.imageUrl ? await presignedUrl(post.imageUrl) : null,
+      image_url: post.imageUrl ? `/api/v1/designer/posts/${post.id}/image` : null,
       source: { filename: post.document.originalFilename, page_number: post.page.pageNumber },
       context: post.context,
       publication: post.publicationItems

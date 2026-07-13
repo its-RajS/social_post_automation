@@ -123,6 +123,17 @@ function AuthenticatedDashboard({ session, onLogout }: { session: AdminSession; 
   }, [date])
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('linkedin') === 'error') {
+      toast.error(params.get('linkedin_error') ?? 'LinkedIn connection failed')
+      window.history.replaceState({}, document.title, window.location.pathname)
+    } else if (params.get('linkedin') === 'connected') {
+      toast.success('LinkedIn connected')
+      window.history.replaceState({}, document.title, window.location.pathname)
+    }
+  }, [])
+
+  useEffect(() => {
     let active = true
     Promise.all([getDesignerPosts(date), listDesignerPublications(), getLinkedInStatus()])
       .then(([daily, publications, linkedInStatus]) => {

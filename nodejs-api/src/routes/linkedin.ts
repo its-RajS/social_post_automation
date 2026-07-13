@@ -6,6 +6,7 @@ import { config } from '../config';
 import { prisma } from '../db';
 import { AuthenticatedRequest, parseCookies, requireAdmin, requireCsrf } from '../middleware/adminAuth';
 import { encryptSecret } from '../services/secrets';
+import { linkedinOAuthErrorMessage } from '../services/linkedinOAuth';
 
 const router = Router();
 const STATE_COOKIE = 'linkedin_oauth_state';
@@ -24,7 +25,7 @@ router.get('/oauth/start', requireAdmin, (_req, res) => {
     client_id: config.LINKEDIN_CLIENT_ID,
     redirect_uri: config.LINKEDIN_REDIRECT_URI,
     state,
-    scope: 'openid profile w_member_social w_organization_social',
+    scope: config.LINKEDIN_SCOPES.join(' '),
   });
   res.redirect(`https://www.linkedin.com/oauth/v2/authorization?${query}`);
 });
@@ -32,10 +33,24 @@ router.get('/oauth/start', requireAdmin, (_req, res) => {
 router.get('/oauth/callback', requireAdmin, async (req, res, next) => {
   try {
     const expectedState = parseCookies(req.headers.cookie)[STATE_COOKIE];
-    const code = typeof req.query.code === 'string' ? req.query.code : '';
     const state = typeof req.query.state === 'string' ? req.query.state : '';
-    if (!code || !state || state !== expectedState) {
+    if (!state || state !== expectedState) {
       res.status(400).send('Invalid LinkedIn OAuth callback state');
+      return;
+    }
+    res.clearCookie(STATE_COOKIE, { path: '/' });
+
+    const oauthError = typeof req.query.error === 'string' ? req.query.error : '';
+    if (oauthError) {
+      const description = typeof req.query.error_description === 'string' ? req.query.error_description : undefined;
+      const query = new URLSearchParams({ linkedin: 'error', linkedin_error: linkedinOAuthErrorMessage(oauthError, description) });
+      res.redirect(`${config.FRONTEND_URL}/designer?${query}`);
+      return;
+    }
+
+    const code = typeof req.query.code === 'string' ? req.query.code : '';
+    if (!code) {
+      res.status(400).send('LinkedIn did not return an authorization code');
       return;
     }
 
@@ -99,10 +114,18 @@ router.get('/oauth/callback', requireAdmin, async (req, res, next) => {
         ...(!defaultDestination ? { isDefault: true } : {}),
       },
     });
-    res.clearCookie(STATE_COOKIE, { path: '/' });
     res.redirect(`${config.FRONTEND_URL}/designer?linkedin=connected`);
   } catch (error) {
-    next(error);
+    console.error('[linkedin-oauth-callback]', error);
+    if (res.headersSent) {
+      next(error);
+      return;
+    }
+    const query = new URLSearchParams({
+      linkedin: 'error',
+      linkedin_error: 'LinkedIn connection failed. Check the API logs for details and verify the enabled LinkedIn products and scopes.',
+    });
+    res.redirect(`${config.FRONTEND_URL}/designer?${query}`);
   }
 });
 

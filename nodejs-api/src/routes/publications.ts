@@ -6,10 +6,26 @@ import { validatePublicationSelection } from '../domain/designer';
 import { prisma } from '../db';
 import { requireAdmin, requireCsrf } from '../middleware/adminAuth';
 import { enqueuePreparation, enqueuePublication } from '../services/designerQueue';
-import { presignedUrl } from '../services/minio';
+import { readObject } from '../services/minio';
 
 const router = Router();
 router.use(requireAdmin);
+
+router.get('/:id/document', async (req, res, next) => {
+  try {
+    const publicationId = z.string().uuid().parse(req.params.id);
+    const publication = await prisma.publication.findUnique({
+      where: { id: publicationId }, select: { documentStoragePath: true },
+    });
+    if (!publication?.documentStoragePath) {
+      res.status(404).json({ error: 'Publication document not found' });
+      return;
+    }
+    const document = await readObject(publication.documentStoragePath);
+    res.type('pdf').set('Content-Disposition', `inline; filename="publication-${publicationId}.pdf"`)
+      .set('Cache-Control', 'private, max-age=300').send(document);
+  } catch (error) { next(error); }
+});
 
 async function serialize(publication: Publication & { destination?: { label: string; authorUrn: string }; items?: Array<{ position: number; post: { id: string; title: string | null; imageUrl: string | null } }> }) {
   return {
@@ -20,7 +36,7 @@ async function serialize(publication: Publication & { destination?: { label: str
     title: publication.title,
     caption: publication.caption,
     hashtags: publication.hashtags,
-    document_url: publication.documentStoragePath ? await presignedUrl(publication.documentStoragePath) : null,
+    document_url: publication.documentStoragePath ? `/api/v1/publications/${publication.id}/document` : null,
     linkedin_post_urn: publication.linkedinPostUrn,
     error_message: publication.errorMessage,
     destination: publication.destination ? {
@@ -30,7 +46,7 @@ async function serialize(publication: Publication & { destination?: { label: str
       post_id: item.post.id,
       position: item.position,
       title: item.post.title,
-      image_url: item.post.imageUrl ? await presignedUrl(item.post.imageUrl) : null,
+      image_url: item.post.imageUrl ? `/api/v1/designer/posts/${item.post.id}/image` : null,
     }))),
     created_at: publication.createdAt,
     published_at: publication.publishedAt,
